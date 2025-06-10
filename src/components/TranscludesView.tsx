@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Clipboard,
   Trash2,
@@ -10,18 +10,62 @@ import {
   X,
   Info
 } from 'lucide-react'
-import { useChatStore } from '@/features/chat/state'
-import { useContextStore } from './state'
+import useTranscludesData from '../hooks/useTranscludesData.ts'
+import useTranscludesSaver from '../hooks/useTranscludesSaver.ts'
+import { defaultTranscludes } from '../defaultData.ts'
+import type { Snapshot, TranscludesData } from '../types/transcludes.ts'
 
-const ContextView: React.FC = () => {
-  const navigationHistory = useChatStore((state) => state.navigationHistory)
-  const { snapshots, addSnapshot, removeSnapshot } = useContextStore()
+const TranscludesView: React.FC = () => {
+  const { data, loading, error } = useTranscludesData()
+  const save = useTranscludesSaver()
 
+  const [state, setState] = useState<TranscludesData>(defaultTranscludes)
+
+  useEffect(() => {
+    if (data) setState(data)
+  }, [data])
+
+  useEffect(() => {
+    if (error === 'transcludes.json not found') {
+      save(defaultTranscludes)
+    }
+  }, [error, save])
+
+  const navigationHistory = state.items
+  const [snapshots, setSnapshots] = useState<Snapshot[]>(state.snapshots)
   const [showSnapshotForm, setShowSnapshotForm] = useState(false)
   const [snapshotTitle, setSnapshotTitle] = useState('')
   const [snapshotDesc, setSnapshotDesc] = useState('')
-  const [activeTab, setActiveTab] = useState<'context' | 'snapshots'>('context')
+  const [activeTab, setActiveTab] = useState<'transcludes' | 'snapshots'>(
+    'transcludes'
+  )
   const [expandedSnapshot, setExpandedSnapshot] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSnapshots(state.snapshots)
+  }, [state.snapshots])
+
+  if (loading) return <p>Loading...</p>
+
+  const addSnapshot = (snapshot: Omit<Snapshot, 'id' | 'timestamp'>) => {
+    const newSnapshot: Snapshot = {
+      ...snapshot,
+      id: `snapshot-${Date.now()}`,
+      timestamp: new Date().toISOString()
+    }
+    const updated = { ...state, snapshots: [newSnapshot, ...snapshots] }
+    setSnapshots(updated.snapshots)
+    setState(updated)
+    save(updated)
+  }
+
+  const removeSnapshot = (id: string) => {
+    const updatedSnapshots = snapshots.filter((s) => s.id !== id)
+    const updated = { ...state, snapshots: updatedSnapshots }
+    setSnapshots(updatedSnapshots)
+    setState(updated)
+    save(updated)
+  }
 
   const handleCreateSnapshot = () => {
     // In a real app, we would take an actual screenshot of the app here
@@ -53,16 +97,16 @@ const ContextView: React.FC = () => {
     <div className="animate-fadeIn">
       <h1 className="text-2xl font-bold mb-6 flex items-center">
         <Clipboard className="mr-2" size={24} />
-        Context Manager
+        Transcludes Manager
       </h1>
 
       <div className="mb-6">
         <div className="flex border-b border-gray-200">
           <button
-            className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'context' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('context')}
+            className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'transcludes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('transcludes')}
           >
-            Context Items
+            Transclude Items
           </button>
           <button
             className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'snapshots' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
@@ -73,10 +117,10 @@ const ContextView: React.FC = () => {
         </div>
       </div>
 
-      {activeTab === 'context' ? (
+      {activeTab === 'transcludes' ? (
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium">Current Context</h2>
+            <h2 className="text-lg font-medium">Current Transcludes</h2>
             <div className="flex space-x-2">
               <button className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded flex items-center text-sm hover:bg-blue-100">
                 <Plus size={16} className="mr-2" />
@@ -90,13 +134,13 @@ const ContextView: React.FC = () => {
           </div>
 
           <p className="text-gray-600 mb-4">
-            The following context will be included in your conversations. You
-            can add, edit, or remove context items as needed.
+            The following transcludes will be included in your conversations.
+            You can add, edit, or remove transclude items as needed.
           </p>
 
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h3 className="text-sm font-medium text-gray-700 mb-2">
-              Active Context Items
+              Active Transclude Items
             </h3>
 
             {navigationHistory.length > 0 ? (
@@ -160,7 +204,7 @@ const ContextView: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-4 text-gray-500">
-                No context items have been added yet.
+                No transclude items have been added yet.
               </div>
             )}
           </div>
@@ -291,7 +335,7 @@ const ContextView: React.FC = () => {
                         <div className="mt-2 flex justify-end space-x-1">
                           <button
                             className="p-1 text-blue-500 hover:text-blue-700"
-                            title="Add to context"
+                            title="Add to transcludes"
                           >
                             <Plus size={14} />
                           </button>
@@ -338,7 +382,7 @@ const ContextView: React.FC = () => {
       )}
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-medium mb-4">Saved Context Templates</h2>
+        <h2 className="text-lg font-medium mb-4">Saved Transclude Templates</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer">
@@ -372,4 +416,4 @@ const ContextView: React.FC = () => {
   )
 }
 
-export default ContextView
+export default TranscludesView
