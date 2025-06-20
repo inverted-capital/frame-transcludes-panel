@@ -12,12 +12,7 @@ const mockProfile: AccountData = {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ArtifactFrame
-      mockRepos={{ mock: { main: { 'profile.json': mockProfile } } }}
-      mockFrameProps={{
-        target: { did: HOST_SCOPE.did, repo: 'mock', branch: 'main' }
-      }}
-    >
+    <ArtifactFrame>
       <App />
     </ArtifactFrame>
   </StrictMode>
